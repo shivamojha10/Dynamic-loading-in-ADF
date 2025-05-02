@@ -1,0 +1,125 @@
+{
+    "name": "CsvToSnowflakePipeline",
+    "properties": {
+        "activities": [
+            {
+                "name": "metadata",
+                "type": "GetMetadata",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataset": {
+                        "referenceName": "METADATA",
+                        "type": "DatasetReference"
+                    },
+                    "fieldList": [
+                        "childItems"
+                    ],
+                    "storeSettings": {
+                        "type": "AzureBlobStorageReadSettings",
+                        "recursive": true,
+                        "enablePartitionDiscovery": false
+                    },
+                    "formatSettings": {
+                        "type": "DelimitedTextReadSettings"
+                    }
+                }
+            },
+            {
+                "name": "ForEach1",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "metadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('metadata').output.childItems",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "Copy data1",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "DelimitedTextSource",
+                                    "storeSettings": {
+                                        "type": "AzureBlobStorageReadSettings",
+                                        "recursive": true,
+                                        "enablePartitionDiscovery": false
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextReadSettings"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "SnowflakeV2Sink",
+                                    "importSettings": {
+                                        "type": "SnowflakeImportCopyCommand"
+                                    }
+                                },
+                                "enableStaging": true,
+                                "stagingSettings": {
+                                    "linkedServiceName": {
+                                        "referenceName": "blob_uri",
+                                        "type": "LinkedServiceReference"
+                                    },
+                                    "path": "ext-staging"
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "inputfiles",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "FileName": {
+                                            "value": "@item().name",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "snowflakedb",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "TableName": {
+                                            "value": "@toUpper(replace(item().name,'.csv',''))",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "annotations": [],
+        "lastPublishTime": "2025-04-30T06:52:57Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
